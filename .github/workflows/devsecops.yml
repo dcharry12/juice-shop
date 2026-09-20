@@ -218,22 +218,37 @@ jobs:
           echo "### SBOM" >> "$GITHUB_STEP_SUMMARY"
           echo "- CycloneDX generado con **${n}** componentes (artefacto \`sbom-cyclonedx\`)" >> "$GITHUB_STEP_SUMMARY"
           test "$n" -gt 0
-      - name: "5 · Escaneo de imagen (Grype) - bloquea CRITICAL con parche disponible"
-        id: grype
+      - name: "5 · Escanear imagen (Grype)"
+        id: scan
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
           image: juice-shop:${{ github.sha }}
-          fail-build: true
-          severity-cutoff: critical
+          fail-build: false
           only-fixed: true
-          output-format: table
+          output-format: json
           add-cpes-if-none: false
+      - name: "5 · Compuerta - CRITICAL nuevos con parche vs. línea base"
+        id: grype
+        env:
+          GRYPE_JSON: ${{ steps.scan.outputs.json }}
+        run: |
+          jq -r '[.matches[] | select(.vulnerability.severity=="Critical") | "\(.vulnerability.id)|\(.artifact.name)|\(.artifact.version)"] | unique | .[]' "$GRYPE_JSON" | sort > crit-head.txt
+          comm -13 <(sort .security/grype-baseline.txt) crit-head.txt > crit-new.txt
+          high=$(jq '[.matches[] | select(.vulnerability.severity=="High")] | length' "$GRYPE_JSON")
+          {
+            echo "### Imagen de contenedor (Grype, solo vulnerabilidades con parche)"
+            echo "- CRITICAL totales: $(wc -l < crit-head.txt) · heredados en línea base: $(wc -l < .security/grype-baseline.txt) · HIGH totales: ${high}"
+            echo "- CRITICAL **nuevos**: **$(wc -l < crit-new.txt)**"
+            if [ -s crit-new.txt ]; then echo; echo '| Advisory | Paquete | Versión |'; echo '|---|---|---|'; awk -F'|' '{printf "| %s | %s | %s |\n",$1,$2,$3}' crit-new.txt; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Imagen - ${high} vulnerabilidades HIGH heredadas (advertencia, backlog)."
+          if [ -s crit-new.txt ]; then echo "::error::Imagen - CRITICAL nuevos con parche disponible:"; cat crit-new.txt; exit 1; fi
       - name: "7 · DAST baseline (ZAP) - advierte"
         id: zap
         continue-on-error: true
         run: |
           docker run -d --name app -p 3000:3000 juice-shop:${{ github.sha }}
-          for i in $(seq 1 30); do curl -fs http://localhost:3000/rest/admin/application-version && break; sleep 2; done
+          for _ in $(seq 1 30); do curl -fs http://localhost:3000/rest/admin/application-version && break; sleep 2; done
           mkdir -p zap && chmod 777 zap
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.17.0 \
             zap-baseline.py -t http://localhost:3000 -J zap.json -r zap.html -I

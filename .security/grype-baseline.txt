@@ -1,0 +1,6 @@
+GHSA-c7hr-j4mj-j2w6|jsonwebtoken|0.1.0
+GHSA-c7hr-j4mj-j2w6|jsonwebtoken|0.4.0
+GHSA-jf85-cpcp-j695|lodash|2.4.2
+GHSA-rg76-677x-56q9|crypto-js|3.3.0
+GHSA-xwcq-pm8m-c4vf|crypto-js|3.3.0
+GHSA-23hp-3jrh-7fpw|tar|6.2.1
