@@ -1,0 +1,488 @@
+{
+    "failed_checks": [
+        {
+            "file": "/Dockerfile",
+            "findings": [
+                {
+                    "resource": "/Dockerfile.",
+                    "check_ids": [
+                        "CKV_DOCKER_2"
+                    ]
+                },
+                {
+                    "resource": "/Dockerfile.FROM",
+                    "check_ids": [
+                        "CKV_DOCKER_7"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/data/static/codefixes/iacLeakedKeyChallenge_1.tf",
+            "findings": [
+                {
+                    "resource": "aws_availability_zones.available",
+                    "check_ids": [
+                        "CKV_AWS_394"
+                    ]
+                },
+                {
+                    "resource": "aws_efs_file_system.juice_shop_data",
+                    "check_ids": [
+                        "CKV_AWS_184"
+                    ]
+                },
+                {
+                    "resource": "aws_lb.juice_shop",
+                    "check_ids": [
+                        "CKV2_AWS_20",
+                        "CKV2_AWS_28",
+                        "CKV_AWS_131",
+                        "CKV_AWS_150",
+                        "CKV_AWS_91"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_listener.http",
+                    "check_ids": [
+                        "CKV_AWS_103",
+                        "CKV_AWS_2"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_target_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_378"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.alb",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_260",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.ecs",
+                    "check_ids": [
+                        "CKV2_AWS_5",
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.efs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_vpc.main",
+                    "check_ids": [
+                        "CKV2_AWS_11",
+                        "CKV2_AWS_12"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/data/static/codefixes/iacLeakedKeyChallenge_2.tf",
+            "findings": [
+                {
+                    "resource": "aws_availability_zones.available",
+                    "check_ids": [
+                        "CKV_AWS_394"
+                    ]
+                },
+                {
+                    "resource": "aws_efs_file_system.juice_shop_data",
+                    "check_ids": [
+                        "CKV_AWS_184"
+                    ]
+                },
+                {
+                    "resource": "aws_lb.juice_shop",
+                    "check_ids": [
+                        "CKV2_AWS_20",
+                        "CKV2_AWS_28",
+                        "CKV_AWS_131",
+                        "CKV_AWS_150",
+                        "CKV_AWS_91"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_listener.http",
+                    "check_ids": [
+                        "CKV_AWS_103",
+                        "CKV_AWS_2"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_target_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_378"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.alb",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_260",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.ecs",
+                    "check_ids": [
+                        "CKV2_AWS_5",
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.efs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_vpc.main",
+                    "check_ids": [
+                        "CKV2_AWS_11",
+                        "CKV2_AWS_12"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/data/static/codefixes/iacLeakedKeyChallenge_3_correct.tf",
+            "findings": [
+                {
+                    "resource": "aws_availability_zones.available",
+                    "check_ids": [
+                        "CKV_AWS_394"
+                    ]
+                },
+                {
+                    "resource": "aws_efs_file_system.juice_shop_data",
+                    "check_ids": [
+                        "CKV_AWS_184"
+                    ]
+                },
+                {
+                    "resource": "aws_lb.juice_shop",
+                    "check_ids": [
+                        "CKV2_AWS_20",
+                        "CKV2_AWS_28",
+                        "CKV_AWS_131",
+                        "CKV_AWS_150",
+                        "CKV_AWS_91"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_listener.http",
+                    "check_ids": [
+                        "CKV_AWS_103",
+                        "CKV_AWS_2"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_target_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_378"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.alb",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_260",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.ecs",
+                    "check_ids": [
+                        "CKV2_AWS_5",
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.efs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_vpc.main",
+                    "check_ids": [
+                        "CKV2_AWS_11",
+                        "CKV2_AWS_12"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/infrastructure/Dockerfile",
+            "findings": [
+                {
+                    "resource": "/infrastructure/Dockerfile.",
+                    "check_ids": [
+                        "CKV_DOCKER_2"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/infrastructure/terraform/main.tf",
+            "findings": [
+                {
+                    "resource": "aws_cloudwatch_log_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_158",
+                        "CKV_AWS_338"
+                    ]
+                },
+                {
+                    "resource": "aws_ecs_service.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_333"
+                    ]
+                },
+                {
+                    "resource": "aws_ecs_task_definition.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_336"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/infrastructure/terraform/networking.tf",
+            "findings": [
+                {
+                    "resource": "aws_availability_zones.available",
+                    "check_ids": [
+                        "CKV_AWS_394"
+                    ]
+                },
+                {
+                    "resource": "aws_efs_file_system.juice_shop_data",
+                    "check_ids": [
+                        "CKV_AWS_184"
+                    ]
+                },
+                {
+                    "resource": "aws_lb.juice_shop",
+                    "check_ids": [
+                        "CKV2_AWS_20",
+                        "CKV2_AWS_28",
+                        "CKV_AWS_131",
+                        "CKV_AWS_150",
+                        "CKV_AWS_91"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_listener.http",
+                    "check_ids": [
+                        "CKV_AWS_103",
+                        "CKV_AWS_2"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_target_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_378"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.alb",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_260",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.ecs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.efs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public[0]",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public[1]",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_vpc.main",
+                    "check_ids": [
+                        "CKV2_AWS_11",
+                        "CKV2_AWS_12"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/terraform/main.tf",
+            "findings": [
+                {
+                    "resource": "aws_cloudwatch_log_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_158",
+                        "CKV_AWS_338"
+                    ]
+                },
+                {
+                    "resource": "aws_ecs_service.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_333"
+                    ]
+                },
+                {
+                    "resource": "aws_ecs_task_definition.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_336"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/terraform/networking.tf",
+            "findings": [
+                {
+                    "resource": "aws_availability_zones.available",
+                    "check_ids": [
+                        "CKV_AWS_394"
+                    ]
+                },
+                {
+                    "resource": "aws_efs_file_system.juice_shop_data",
+                    "check_ids": [
+                        "CKV_AWS_184"
+                    ]
+                },
+                {
+                    "resource": "aws_lb.juice_shop",
+                    "check_ids": [
+                        "CKV2_AWS_20",
+                        "CKV2_AWS_28",
+                        "CKV_AWS_131",
+                        "CKV_AWS_150",
+                        "CKV_AWS_91"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_listener.http",
+                    "check_ids": [
+                        "CKV_AWS_103",
+                        "CKV_AWS_2"
+                    ]
+                },
+                {
+                    "resource": "aws_lb_target_group.juice_shop",
+                    "check_ids": [
+                        "CKV_AWS_378"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.alb",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_260",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.ecs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_security_group.efs",
+                    "check_ids": [
+                        "CKV_AWS_23",
+                        "CKV_AWS_382"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public[0]",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_subnet.public[1]",
+                    "check_ids": [
+                        "CKV_AWS_130"
+                    ]
+                },
+                {
+                    "resource": "aws_vpc.main",
+                    "check_ids": [
+                        "CKV2_AWS_11",
+                        "CKV2_AWS_12"
+                    ]
+                }
+            ]
+        },
+        {
+            "file": "/test/smoke/Dockerfile",
+            "findings": [
+                {
+                    "resource": "/test/smoke/Dockerfile.",
+                    "check_ids": [
+                        "CKV_DOCKER_2",
+                        "CKV_DOCKER_3"
+                    ]
+                },
+                {
+                    "resource": "/test/smoke/Dockerfile.FROM",
+                    "check_ids": [
+                        "CKV_DOCKER_7"
+                    ]
+                }
+            ]
+        }
+    ]
+}

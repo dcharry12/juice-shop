@@ -1,0 +1,299 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: devsecops-${{ github.ref }}
+  cancel-in-progress: true
+
+# Todas las acciones de terceros están fijadas por SHA de commit (no por tag mutable).
+jobs:
+  # ── Control 1 · Secret scanning ─────────────────────────────── (VUL-02, VUL-03, VUL-07)
+  secrets-scan:
+    name: "1 · Secret scanning (Gitleaks)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PUSH_BEFORE: ${{ github.event.before }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolver commit base
+        run: .github/scripts/range.sh
+      - name: Instalar Gitleaks (checksum verificado)
+        run: |
+          curl -sSL -o gl.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gl.tgz" | sha256sum -c -
+          tar -xzf gl.tgz gitleaks
+      - name: Escanear commits del cambio
+        run: |
+          if [ -n "$BASE_SHA" ]; then OPTS="${BASE_SHA}..HEAD"; else OPTS="-1"; fi
+          ./gitleaks git . --log-opts="$OPTS" --redact --verbose \
+            --report-format sarif --report-path gitleaks.sarif --exit-code 1
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### Secret scanning"
+            echo "- Rango analizado: \`${BASE_SHA:-HEAD~1..HEAD}\`"
+            echo "- Resultado: **${{ job.status }}** (umbral: cualquier secreto = bloquear)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: gitleaks-sarif
+          path: gitleaks.sarif
+          if-no-files-found: ignore
+
+  # ── Control 2 · SAST ─────────────────────────────────────────── (VUL-01, VUL-04, VUL-08, VUL-10)
+  sast:
+    name: "2 · SAST (Semgrep)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PUSH_BEFORE: ${{ github.event.before }}
+      SEMGREP_SEND_METRICS: "off"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolver commit base
+        run: .github/scripts/range.sh
+      - name: Instalar Semgrep
+        run: python3 -m pip install --quiet semgrep==1.177.0
+      - name: Escaneo completo (deuda heredada, solo informe)
+        run: |
+          semgrep scan --metrics off --quiet \
+            --config p/owasp-top-ten --config p/javascript --config p/typescript \
+            --exclude test --exclude frontend/src/assets --exclude data/static \
+            --json-output semgrep-full.json || true
+          total=$(jq '.results | length' semgrep-full.json)
+          err=$(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-full.json)
+          {
+            echo "### SAST (Semgrep)"
+            echo "- Hallazgos totales en el repositorio (deuda heredada de Juice Shop): ${total}, de los cuales severidad ERROR: ${err}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::SAST: ${err} hallazgos ERROR heredados (informe, no bloquean)."
+      - name: Compuerta - hallazgos NUEVOS severidad ERROR
+        run: |
+          if [ -z "$BASE_SHA" ]; then echo "::warning::Sin commit base: compuerta SAST solo informativa."; exit 0; fi
+          set +e
+          semgrep scan --metrics off --quiet --baseline-commit "$BASE_SHA" --severity ERROR --error \
+            --config p/owasp-top-ten --config p/javascript --config p/typescript \
+            --exclude test --exclude frontend/src/assets --exclude data/static \
+            --sarif-output semgrep.sarif --text --text-output semgrep-new.txt
+          rc=$?
+          cat semgrep-new.txt || true
+          {
+            echo "- Hallazgos ERROR **nuevos** vs. \`${BASE_SHA:0:7}\`: $([ $rc -eq 0 ] && echo 0 || echo '>=1 (ver log)')"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: semgrep-results
+          path: |
+            semgrep.sarif
+            semgrep-full.json
+            semgrep-new.txt
+          if-no-files-found: ignore
+
+  # ── Control 3 · SCA ──────────────────────────────────────────── (VUL-01..12 vía dependencias, VUL-03 jsonwebtoken)
+  sca:
+    name: "3 · SCA (npm audit diferencial)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PUSH_BEFORE: ${{ github.event.before }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Resolver commit base
+        run: .github/scripts/range.sh
+      - name: Auditar dependencias (HEAD vs base)
+        id: audit
+        run: .github/scripts/sca-diff.sh
+      - name: Compuerta - advisories HIGH/CRITICAL nuevos
+        if: steps.audit.outputs.mode == 'diff'
+        run: |
+          n="${{ steps.audit.outputs.new }}"
+          if [ "$n" -gt 0 ]; then echo "::error::SCA: ${n} advisory(s) HIGH/CRITICAL nuevos. Ver resumen del job."; exit 1; fi
+      - name: Advertencia - deuda heredada
+        run: echo "::warning::SCA: ${{ steps.audit.outputs.total }} advisories HIGH/CRITICAL heredados (no bloquean; backlog)."
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: sca-npm-audit
+          path: |
+            audit-head.json
+            audit-base.json
+            new.txt
+          if-no-files-found: ignore
+
+  # ── Control 4 · Validación de IaC ────────────────────────────── (VUL-04 mínimo privilegio, VUL-09 misconfiguración, VUL-12)
+  iac:
+    name: "4 · IaC (Checkov)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Instalar Checkov
+        run: python3 -m pip install --quiet checkov==3.3.19
+      - name: Compuerta - misconfiguraciones NUEVAS vs. línea base
+        run: |
+          set -o pipefail
+          checkov -d . --framework dockerfile,terraform,github_actions \
+            --skip-path node_modules --skip-path frontend \
+            --baseline .checkov.baseline --compact --quiet \
+            -o cli -o sarif --output-file-path console,checkov-results 2>&1 | tee checkov.log
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "### IaC (Checkov)"
+            echo "- Línea base heredada: \`.checkov.baseline\` (deuda registrada, no bloquea)"
+            echo "- Resultado: **${{ job.status }}** (una misconfiguración nueva de Dockerfile/Terraform/Workflows bloquea)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: checkov-results
+          path: |
+            checkov-results/
+            checkov.log
+          if-no-files-found: ignore
+
+  # ── Controles 5-7 · Contenedor + SBOM + DAST ─────────────────── (VUL-01/08/09 runtime, cadena de suministro)
+  container:
+    name: "5-7 · Contenedor (Grype) · SBOM (Syft) · DAST (ZAP)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    outputs:
+      sbom: ${{ steps.sbomcheck.outcome }}
+      grype: ${{ steps.grype.outcome }}
+      zap: ${{ steps.zap.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Construir imagen
+        run: docker build -t juice-shop:${{ github.sha }} .
+      - name: "6 · Generar SBOM CycloneDX (Syft)"
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: juice-shop:${{ github.sha }}
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+          artifact-name: sbom-cyclonedx
+      - name: Validar SBOM (componentes > 0)
+        id: sbomcheck
+        run: |
+          n=$(jq '.components | length' sbom.cdx.json)
+          echo "Componentes en SBOM: $n"
+          echo "### SBOM" >> "$GITHUB_STEP_SUMMARY"
+          echo "- CycloneDX generado con **${n}** componentes (artefacto \`sbom-cyclonedx\`)" >> "$GITHUB_STEP_SUMMARY"
+          test "$n" -gt 0
+      - name: "5 · Escaneo de imagen (Grype) - bloquea CRITICAL con parche disponible"
+        id: grype
+        uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          image: juice-shop:${{ github.sha }}
+          fail-build: true
+          severity-cutoff: critical
+          only-fixed: true
+          output-format: table
+          add-cpes-if-none: false
+      - name: "7 · DAST baseline (ZAP) - advierte"
+        id: zap
+        continue-on-error: true
+        run: |
+          docker run -d --name app -p 3000:3000 juice-shop:${{ github.sha }}
+          for i in $(seq 1 30); do curl -fs http://localhost:3000/rest/admin/application-version && break; sleep 2; done
+          mkdir -p zap && chmod 777 zap
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:2.17.0 \
+            zap-baseline.py -t http://localhost:3000 -J zap.json -r zap.html -I
+          warns=$(jq '[.site[].alerts[] | select(.riskcode=="2" or .riskcode=="3")] | length' zap/zap.json)
+          echo "::warning::DAST: ${warns} alertas Medium/High (informe, no bloquean)."
+          echo "### DAST (ZAP baseline)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Alertas Medium/High: **${warns}**" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: zap-report
+          path: zap/
+          if-no-files-found: ignore
+
+  # ── Quality gate consolidado ─────────────────────────────────
+  quality-gate:
+    name: "Quality gate de liberación"
+    runs-on: ubuntu-latest
+    needs: [secrets-scan, sast, sca, iac, container]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Evaluar compuertas
+        env:
+          R_SECRETS: ${{ needs.secrets-scan.result }}
+          R_SAST: ${{ needs.sast.result }}
+          R_SCA: ${{ needs.sca.result }}
+          R_IAC: ${{ needs.iac.result }}
+          R_CONTAINER: ${{ needs.container.result }}
+          O_SBOM: ${{ needs.container.outputs.sbom }}
+          O_GRYPE: ${{ needs.container.outputs.grype }}
+          O_ZAP: ${{ needs.container.outputs.zap }}
+        run: |
+          fail=0
+          row() { # nombre resultado accion
+            local icon="✅"; [ "$2" != "success" ] && icon="❌"
+            [ "$3" = "ADVERTIR" ] && [ "$2" != "success" ] && icon="⚠️"
+            echo "| $1 | $icon $2 | $3 |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$3" = "BLOQUEAR" ] && [ "$2" != "success" ]; then fail=1; fi
+          }
+          {
+            echo "## Quality gate de liberación"
+            echo "| Control | Resultado | Acción si falla |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          row "Secret scanning (Gitleaks)" "$R_SECRETS" BLOQUEAR
+          row "SAST (Semgrep, hallazgos nuevos ERROR)" "$R_SAST" BLOQUEAR
+          row "SCA (advisories nuevos HIGH/CRITICAL)" "$R_SCA" BLOQUEAR
+          row "IaC (Checkov, misconfig. nuevas)" "$R_IAC" BLOQUEAR
+          row "Imagen (Grype, CRITICAL con parche)" "${O_GRYPE:-$R_CONTAINER}" BLOQUEAR
+          row "SBOM CycloneDX válido" "${O_SBOM:-$R_CONTAINER}" BLOQUEAR
+          row "DAST (ZAP baseline)" "${O_ZAP:-skipped}" ADVERTIR
+          if [ $fail -eq 1 ]; then echo "**Liberación BLOQUEADA**" >> "$GITHUB_STEP_SUMMARY"; exit 1; fi
+          echo "**Liberación AUTORIZADA**" >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Entrega simulada (solo si la compuerta pasa en master) ───
+  deploy-simulado:
+    name: "Entrega simulada"
+    runs-on: ubuntu-latest
+    needs: quality-gate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    timeout-minutes: 5
+    steps:
+      - run: echo "ENTREGA SIMULADA AUTORIZADA - todos los controles bloqueantes aprobados"
