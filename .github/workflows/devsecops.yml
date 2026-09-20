@@ -141,7 +141,8 @@ jobs:
           n="${{ steps.audit.outputs.new }}"
           if [ "$n" -gt 0 ]; then echo "::error::SCA: ${n} advisory(s) HIGH/CRITICAL nuevos. Ver resumen del job."; exit 1; fi
       - name: Advertencia - deuda heredada
-        run: echo "::warning::SCA: ${{ steps.audit.outputs.total }} advisories HIGH/CRITICAL heredados (no bloquean; backlog)."
+        run: |
+          echo "::warning::SCA - ${{ steps.audit.outputs.total }} advisories HIGH/CRITICAL heredados (no bloquean, backlog)."
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
